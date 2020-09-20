@@ -1,0 +1,7 @@
+bin/*
+res/*
+**/*.swp
+startup-mpd.sh
+lib_prev.data
+lib_cur.data
+lib_now.data

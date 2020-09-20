@@ -1,0 +1,26 @@
+# itmpcsync - The iTunes MPD Playcount Synchroniser
+itmpcsync is a utility that synchronises the Play Count of songs in an iTunes library, with an MPD music library, through the use of stickers. This is intended to be used in conjunction with a program that can automatically set play count stickers, such as `mpdfavd`.
+
+# Why would I need this?
+Chances are, that you don't. This is intended for the very specific set of people who dual-boot Linux and Windows, use Linux more often than Windows, and store all their music both locally on an iPod and on their computer, keep them in sync using iTunes, and who want to use MPD to listen to music on their Linux system. If you don't meet all that criteria, then this software is likely going to be pointless to you.
+
+# How does it work?
+The actual executable to run is a script called 'itmpcsync'. A C++ program needs to also be compiled, called `itxmlconvert`, which is used to convert the iTunes XML library from a 'plist' format to a pipe-delimited list that is relatively easy and fast to work with.
+
+# Notes
+* Make sure that as much of your music library is properly tagged! This program will only work properly if the tags on all of the songs in the iTunes and MPD libraries match...
+* `itxmlconvert` can be compiled to output in JSON if you wish to use it for other purposes. Keep in mind that if you do this, the `itmpcsync` will no longer function. To enable JSON output, add `-DJSON_OUT` to the compiler options in the Makefile, or compile manually with GCC, etc.
+* If you are running the script on to automatically start, you may need to `cd` to where the script actually is, before running it. This is due to the fact that the script will try and run `itxmlconvert` using a relative path, and needs to be able to find it.
+* The script produces a 'lib_prev.data' file, which contains the data from the last sync. This will be created wherever the script was run from, which you should make sure is where the script really is. ALSO you will need to be incredibly careful not to delete this file, as it will cause the script to lose track of the data.
+
+# How `itmpcsync` script works:
+* Script executes `itxmlconvert`, which goes through the iTunes XML library, and converts it to a format that can actually be worked with.
+* Checks if a sync has been run before. If it hasn't, we just get the raw playcounts from iTunes and add them to whatever is already in the MPD library.
+* If a sync HAS been run before, we find the difference in play counts in the iTunes library, from it's last sync, and add it the the MPD library's play counts.
+
+# `itmpcsync` Dependencies:
+* mpc
+
+# `itxmlconvert` Dependencies
+* PlistCpp (included in source)
+* Boost (because PlistCpp depends on it - included in source)
