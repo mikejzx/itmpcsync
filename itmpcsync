@@ -26,6 +26,24 @@
 # Path of iTunes XML library
 ITUNES_LIB_PATH="$@"
 
+# Data locations
+DATA_LOC="$HOME/.local/share/itmpcsync"
+PATH_LIBPREV="$DATA_LOC/lib_prev.data"
+PATH_LIBCUR="$DATA_LOC/lib_cur.data"
+PATH_LIBNOW="$DATA_LOC/lib_now.data"
+PATH_DIFF="$DATA_LOC/last_diff.data"
+
+# Make sure itxmlconvert is in path
+if [[ -n "$(which itxmlconvert 2>&1 | grep -Fi 'no itxmlconvert in')" ]]; then
+	echo "itxmlconvert utility is not installed! Please add it to a directory under PATH (e.g /usr/local/bin)"
+	exit -1
+fi
+
+# Make the data location
+if [[ ! -f "$DATA_LOC" ]]; then
+	mkdir -p "$DATA_LOC" || exit -1
+fi
+
 # Check if we passed anything.
 if [[ -z "$ITUNES_LIB_PATH" ]]; then
 	echo "Usage: itmpcsync <iTunes XML Library Path>"
@@ -46,19 +64,19 @@ if ! mpc status -q; then
 fi
 
 # Convert the library into a format we can read.
-./bin/itxmlconvert "$ITUNES_LIB_PATH" > lib_cur.data || exit -1
+itxmlconvert "$ITUNES_LIB_PATH" > "$PATH_LIBCUR" || exit -1
 
 # Make sure we don't append to an old lib_now.
-rm -f .lib_now.data
+rm -f "$PATH_LIBNOW"
 
 # If there was a previous sync, do a diff to only get stuff that actually changed.
-if [[ -f "lib_prev.data" ]]; then
+if [[ -f "$PATH_LIBPREV" ]]; then
 	# Get lines of stuff that changed.
-	diff -U0 lib_prev.data lib_cur.data > .diff.data
+	diff -U0 "$PATH_LIBPREV" "$PATH_LIBCUR" > "$PATH_DIFF"
 
 	# Create the next
 	echo "Syncing..."
-	touch .lib_now.data
+	touch "$PATH_LIBNOW"
 
 	# Iterate over the diff data.
 	# There are 3 lines we need to look for usually:
@@ -89,7 +107,7 @@ if [[ -f "lib_prev.data" ]]; then
 			newcount=$((($curcount)-($oldcount)))
 			new="$(echo "$cur" | awk -F "|" '{print $1;}')|$(echo "$cur" | awk -F "|" '{print $2;}')|$(echo "$cur" | awk -F "|" '{print $3;}')|$newcount"
 			new=${new#"+"}
-			echo "$new" >> .lib_now.data
+			echo "$new" >> "$PATH_LIBNOW"
 
 			# Increment counter for next loop.
 			i=$(($i+1))
@@ -105,7 +123,7 @@ if [[ -f "lib_prev.data" ]]; then
 			cur=$ln
 		fi
 
-	done <.diff.data
+	done <"$PATH_DIFF"
 
 	# Make sure we handle the final section in diff.
 	if [[ -n "$cur" ]]; then
@@ -119,12 +137,12 @@ if [[ -f "lib_prev.data" ]]; then
 			newcount=$((($curcount)-($oldcount)))
 			new="$(echo "$cur" | awk -F "|" '{print $1;}')|$(echo "$cur" | awk -F "|" '{print $2;}')|$(echo "$cur" | awk -F "|" '{print $3;}')|$newcount"
 			new=${new#"+"}
-			echo "$new" >> .lib_now.data
+			echo "$new" >> "$PATH_LIBNOW"
 	fi
 else
 	# Work with all the data.
 	echo "Syncing for first time - this can take a while depending on how much music you have..."
-	cp lib_cur.data .lib_now.data
+	cp "$PATH_LIBCUR" "$PATH_LIBNOW"
 fi
 
 # Number of songs updated
@@ -174,7 +192,7 @@ while read ln; do
 		d_album=$(echo "$ln" | awk -F "|" '{print $2;}' | sed -e 's/[]\/$*.^[]/\\&/g')
 		d_artist=$(echo "$ln" | awk -F "|" '{print $3;}' | sed -e 's/[]\/$*.^[]/\\&/g')
 
-		sed -i "/$d_title|$d_album|$d_artist|/d" lib_cur.data
+		sed -i "/$d_title|$d_album|$d_artist|/d" "$PATH_LIBCUR"
 
 		songsskipped=$(($songsskipped+1))
 		continue
@@ -200,7 +218,7 @@ while read ln; do
 
 	# Increment songs updated.
 	songsupdated=$(($songsupdated+1))
-done <.lib_now.data
+done <"$PATH_LIBNOW"
 
 echo "$songsupdated synced, $songsskipped skipped."
 
@@ -209,8 +227,8 @@ echo "$songsupdated synced, $songsskipped skipped."
 #fi
 
 # Remove old previous lib and replace with our current one.
-mv lib_cur.data lib_prev.data
+mv "$PATH_LIBCUR" "$PATH_LIBPREV"
 
-# Remove lib_now since we're done with it.
-rm -f .lib_now.data
-rm -f .diff.data
+# Remove working library since we're done with it.
+rm -f "$PATH_LIBNOW"
+rm -f "$PATH_DIFF"

@@ -9,9 +9,12 @@ The actual executable to run is a script called 'itmpcsync'. A C++ program needs
 
 # Notes
 * Make sure that as much of your music library is properly tagged! This program will only work properly if the tags on all of the songs in the iTunes and MPD libraries match...
+
 * `itxmlconvert` can be compiled to output in JSON if you wish to use it for other purposes. Keep in mind that if you do this, the `itmpcsync` will no longer function. To enable JSON output, add `-DJSON_OUT` to the compiler options in the Makefile, or compile manually with GCC, etc.
-* If you are running the script on to automatically start, you may need to `cd` to where the script actually is, before running it. This is due to the fact that the script will try and run `itxmlconvert` using a relative path, and needs to be able to find it.
-* The script produces a 'lib_prev.data' file, which contains the data from the last sync. This will be created wherever the script was run from, which you should make sure is where the script really is. ALSO you will need to be incredibly careful not to delete this file, as it will cause the script to lose track of the data.
+
+* The script produces a 'lib_prev.data' file, which contains the data from the last sync. This will be created under $HOME/.local/share/itmpcsync. Be cautious when handling this file as if it does not exist or gets renamed/moved, all the playcount stickers in your MPD database will likely get doubled up and will be incorrect. Only run the itmpcsync script if you are sure that your path to this file has not changed.
+
+* If you wish to do some safe experimenting with the script, create a backup of your lib_prev.data file, and temporarily comment out the `mpc sticker "$filename" set playcount $plays_total` statement near the end of the script - this will disable setting the stickers in your database.
 
 # How `itmpcsync` script works:
 * Script executes `itxmlconvert`, which goes through the iTunes XML library, and converts it to a format that can actually be worked with.
